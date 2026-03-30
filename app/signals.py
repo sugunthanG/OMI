@@ -8,27 +8,31 @@ FEATURES = [
 
 def generate_signal(model, df):
 
-    latest = df.tail(1)
+    # ✅ USE ONLY TRAINED FEATURES
+    latest = df[FEATURES].iloc[-1:]
 
-    # ✅ safety check
-    missing = [f for f in FEATURES if f not in latest.columns]
-    if missing:
-        raise ValueError(f"Missing features: {missing}")
+    # ✅ MODEL PROBABILITY
+    prob = model.predict_proba(latest)[0][1]
 
-    prob = model.predict_proba(latest[FEATURES])[0][1]
+    # PRICE + ATR
+    entry = float(df["Close"].iloc[-1])
+    atr = float(df["atr"].iloc[-1]) if "atr" in df else None
 
-    entry = float(latest['Close'].values[0])
-    atr = float(latest['atr'].values[0])
-    ema9 = latest['ema9'].values[0]
-    ema21 = latest['ema21'].values[0]
-    rsi = latest['rsi'].values[0]
+    # ✅ TREND FILTER
+    ema9 = df["ema9"].iloc[-1]
+    ema21 = df["ema21"].iloc[-1]
 
-    signal = "NO TRADE"
+    # ✅ RSI FILTER
+    rsi = df["rsi"].iloc[-1]
 
-    if prob > BUY_THRESHOLD and ema9 > ema21 and rsi < 65:
+    # 🔥 FINAL LOGIC
+    if prob >= BUY_THRESHOLD and ema9 > ema21 and rsi < 70:
         signal = "BUY"
 
-    elif prob < SELL_THRESHOLD and ema9 < ema21 and rsi > 35:
+    elif prob <= SELL_THRESHOLD and ema9 < ema21 and rsi > 30:
         signal = "SELL"
+
+    else:
+        signal = "NO TRADE"
 
     return signal, prob, entry, atr

@@ -7,12 +7,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import streamlit as st
 import pandas as pd
 import time
-from datetime import datetime
+from datetime import datetime, UTC
 
 # PIPELINE
 from app.data import fetch_data
 from app.features import create_features
-from app.signals import generate_signal
+from app.signals import generate_signal, FEATURES
 from app.model import load_model
 from app.whatsapp_api import send_whatsapp
 
@@ -27,9 +27,8 @@ if "signal_history" not in st.session_state:
     st.session_state.signal_history = []
 
 # ---------------- SESSION ----------------
-hour = datetime.utcnow().hour
+hour = datetime.now(UTC).hour
 session = "🌏 ASIAN" if hour < 8 else "🇬🇧 LONDON" if hour < 16 else "🇺🇸 NEW YORK"
-
 
 # ---------------- MODEL AUTO DETECT ----------------
 def get_available_models():
@@ -111,20 +110,28 @@ def get_data(interval):
 df = get_data(timeframe)
 
 if df is None:
-    st.error("No data")
+    st.warning("⚠️ Data connection issue... retrying")
+    time.sleep(3)
+    st.rerun()
+
+# ---------------- FEATURE CHECK (CRITICAL) ----------------
+missing = [f for f in FEATURES if f not in df.columns]
+if missing:
+    st.error(f"❌ Missing features: {missing}")
     st.stop()
 
 # ---------------- SIGNAL ----------------
 def safe_signal(df):
     try:
         return generate_signal(model, df)
-    except:
+    except Exception as e:
+        st.error(f"Signal Error: {e}")
         return "NO TRADE", 0.0, None, None
 
 signal, prob, entry, atr = safe_signal(df)
 
-# ✅ CURRENT PRICE FIX
-current_price = float(df["Close"].iloc[-1])
+# ---------------- CURRENT PRICE ----------------
+current_price = round(float(df["Close"].iloc[-1]), 2)
 
 # ---------------- RISK ----------------
 if risk_mode == "Conservative":
@@ -134,7 +141,7 @@ elif risk_mode == "Balanced":
 else:
     sl_mult, tp_mult = 2, 4
 
-# SL / TP
+# ---------------- SL / TP ----------------
 if signal == "BUY" and entry and atr:
     sl = entry - atr * sl_mult
     tp = entry + atr * tp_mult
@@ -147,19 +154,19 @@ else:
 # ---------------- HEADER ----------------
 col1, col2, col3 = st.columns([5, 3, 2])
 col1.markdown("### 🟡 OMI TERMINAL")
-col2.markdown("### LIVE SESSION")
-col3.metric("📡 PRICE", round(current_price, 2))
+col2.markdown(f"### {session} SESSION")
+col3.metric("📡 PRICE", current_price)
 
 # ---------------- LAYOUT ----------------
 left, right = st.columns([7, 3])
 
 # ---------------- TRADINGVIEW CHART ----------------
 with left:
-    st.components.v1.html(f"""
+    st.components.v1.html("""
     <div id="tv_chart"></div>
     <script src="https://s3.tradingview.com/tv.js"></script>
     <script>
-    new TradingView.widget({{
+    new TradingView.widget({
         "width": "100%",
         "height": 600,
         "symbol": "OANDA:XAUUSD",
@@ -168,7 +175,7 @@ with left:
         "theme": "light",
         "style": "1",
         "container_id": "tv_chart"
-    }});
+    });
     </script>
     """, height=600)
 
@@ -185,45 +192,41 @@ with right:
 
     # SOUND
     if sound_alert and signal in ["BUY", "SELL"]:
-        st.audio("https://www.soundjay.com/buttons/sounds/beep-07.mp3")
+        if st.session_state.last_signal != signal:
+            st.components.v1.html("""
+                <audio autoplay>
+                    <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mp3">
+                </audio>
+            """, height=0)
 
     # METRICS
     st.markdown("### 📊 Trade Metrics")
-    st.metric("📡 Current Price", round(current_price, 2))
+    st.metric("📡 Current Price", current_price)
     st.metric("Confidence", round(prob, 2))
-
-    if entry:
-        st.metric("Entry", round(entry, 2))
-    else:
-        st.metric("Entry", "--")
-
-    if sl:
-        st.metric("SL", round(sl, 2))
-        st.metric("TP", round(tp, 2))
-    else:
-        st.metric("SL", "--")
-        st.metric("TP", "--")
+    st.metric("Entry", round(entry, 2) if entry else "--")
+    st.metric("SL", round(sl, 2) if sl else "--")
+    st.metric("TP", round(tp, 2) if tp else "--")
 
     # AI REASON
-    st.markdown("###  OMI AI Reason")
+    st.markdown("### 🤖 OMI AI Reason")
 
     ema9 = df["ema9"].iloc[-1]
     ema21 = df["ema21"].iloc[-1]
     rsi = df["rsi"].iloc[-1]
 
-    if ema9 > ema21:
-        st.write("✔️ Trend Bullish")
-    else:
-        st.write("✔️ Trend Bearish")
+    st.write("Trend:", "Bullish" if ema9 > ema21 else "Bearish")
+    st.write("RSI:", round(rsi, 2))
 
-    if 30 < rsi < 70:
-        st.write("✔️ RSI Neutral")
-    elif rsi >= 70:
-        st.write("⚠️ RSI Overbought")
-    else:
-        st.write("⚠️ RSI Oversold")
+    # DEBUG PANEL 🔥
+    st.markdown("### 🧪 Debug Info")
+    st.write({
+        "Probability": prob,
+        "EMA9": ema9,
+        "EMA21": ema21,
+        "RSI": rsi
+    })
 
-    # WHATSAPP SMART ALERT
+    # WHATSAPP ALERT
     if whatsapp_alert and signal in ["BUY", "SELL"] and phone_number:
         if st.session_state.last_signal != signal:
 
@@ -236,7 +239,7 @@ SL: {round(sl,2)}
 TP: {round(tp,2)}
 
 Confidence: {round(prob,2)}
-Price: {round(current_price,2)}
+Price: {current_price}
 """
 
             send_whatsapp(msg, phone_number)

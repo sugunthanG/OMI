@@ -1,6 +1,7 @@
 from tvDatafeed import TvDatafeed, Interval
+import time
 
-tv = TvDatafeed()
+tv = TvDatafeed(username="c12fxtrader", password="Boopathi@2002")
 
 def fetch_data(interval="5m"):
 
@@ -11,22 +12,28 @@ def fetch_data(interval="5m"):
     else:
         tf = Interval.in_1_hour
 
-    df = tv.get_hist(
-        symbol="XAUUSD",
-        exchange="OANDA",
-        interval=tf,
-        n_bars=500
-    )
+    for attempt in range(3):  # retry 3 times
+        try:
+            df = tv.get_hist(
+                symbol="XAUUSD",
+                exchange="OANDA",
+                interval=tf,
+                n_bars=500
+            )
 
-    if df is None or df.empty:
-        return None
+            if df is not None and not df.empty:
+                df.rename(columns={
+                    "open": "Open",
+                    "high": "High",
+                    "low": "Low",
+                    "close": "Close",
+                    "volume": "Volume"
+                }, inplace=True)
 
-    df.rename(columns={
-        "open": "Open",
-        "high": "High",
-        "low": "Low",
-        "close": "Close",
-        "volume": "Volume"
-    }, inplace=True)
+                return df
 
-    return df
+        except Exception as e:
+            print("Retrying fetch...", e)
+            time.sleep(2)
+
+    return None
