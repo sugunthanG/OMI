@@ -1,0 +1,7 @@
+pandas
+numpy
+yfinance
+ta
+joblib
+streamlit
+requests
