@@ -19,6 +19,93 @@ from app.whatsapp_api import send_whatsapp
 # ---------------- CONFIG ----------------
 st.set_page_config(layout="wide")
 
+
+# ---------------- AGREEMENT LOCK ----------------
+if "agreed" not in st.session_state:
+    st.session_state.agreed = False
+
+if not st.session_state.agreed:
+
+    st.markdown("## 🚨 OMI TRADING AGREEMENT REQUIRED")
+
+    st.warning("You must read and accept the trading rules before using OMI.")
+
+    with st.expander("📘 Read Trading Rules & Ethics", expanded=True):
+        st.markdown("""
+### 📊 TRADING RULES & ETHICS
+
+**1. Capital Protection**
+- The trader shall prioritize capital preservation over profit generation.
+- Maximum risk per trade shall not exceed 1–2% of total capital.
+- Avoid excessive exposure that may lead to major drawdowns.
+
+**2. Strategy Compliance**
+- Trades must be executed strictly based on a predefined strategy.
+- No trade shall be taken without a valid setup.
+- Random or impulsive trading is strictly prohibited.
+
+**3. Risk Management**
+- Every trade must maintain a minimum Risk-to-Reward Ratio (RR) of 1:2.
+- Stop Loss (SL) must be defined before entering any trade.
+- Position sizing must follow risk management rules.
+
+**4. Emotional Discipline**
+- Maintain emotional control during trading.
+- No revenge trading, FOMO, or fear-based decisions.
+- All decisions must be logic-driven.
+
+**5. Loss Acceptance**
+- Losses are a natural part of trading.
+- Avoid attempting to recover losses through irrational trades.
+- Respect every trade outcome without emotional reaction.
+
+**6. Trade Journal**
+- Maintain a record of all trades.
+- Include entry, exit, reasoning, and outcome.
+- Review trades regularly for improvement.
+
+**7. Trade Control**
+- Avoid overtrading and unnecessary exposure.
+- Execute only high-quality setups.
+- Limit trades per session/day.
+
+**8. Ethics**
+- Maintain integrity and honesty in trading.
+- No market manipulation or unethical practices.
+- Follow fair trading standards.
+
+**9. Continuous Learning**
+- Commit to continuous improvement.
+- Learn from mistakes and refine strategies.
+- Stay updated with market behavior.
+
+**10. Consistency**
+- Focus on long-term consistency over short-term profits.
+- Follow a disciplined and repeatable process.
+- Stick to rules regardless of outcomes.
+
+**11. Pre-Trade Checklist**
+- Confirm valid setup before entering.
+- Define Entry, Stop Loss (SL), and Take Profit (TP).
+- No trade without full validation.
+
+**12. Accountability**
+- Take full responsibility for all trading decisions.
+- Do not blame external factors.
+- Maintain discipline and self-evaluation.
+        """)
+
+    agree = st.checkbox("✅ I have read and agree to the rules")
+
+    if st.button("ENTER OMI TERMINAL"):
+        if agree:
+            st.session_state.agreed = True
+            st.rerun()
+        else:
+            st.error("You must accept the rules to continue")
+
+    st.stop()
+
 # ---------------- SESSION STATE ----------------
 if "last_signal" not in st.session_state:
     st.session_state.last_signal = None
