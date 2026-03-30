@@ -52,3 +52,10 @@ python -m bot.live_bot
 ### 4 Run DashBoard
 
 streamlit run dashboard/dashboard.py
+
+
+
+Tagline
+
+Take Risk... Make Profit
+Powered by AEGIS

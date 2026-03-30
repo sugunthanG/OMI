@@ -1,25 +1,32 @@
-import yfinance as yf
-import pandas as pd
+from tvDatafeed import TvDatafeed, Interval
 
-def fetch_data(symbol="GC=F", interval="5m", period="5d"):
-    try:
-        df = yf.download(
-            symbol,
-            interval=interval,
-            period=period,
-            progress=False
-        )
+tv = TvDatafeed()
 
-        # Fix multi-index columns
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
+def fetch_data(interval="5m"):
 
-        if df is None or df.empty:
-            print("❌ No data fetched")
-            return None
+    if interval == "5m":
+        tf = Interval.in_5_minute
+    elif interval == "15m":
+        tf = Interval.in_15_minute
+    else:
+        tf = Interval.in_1_hour
 
-        return df
+    df = tv.get_hist(
+        symbol="XAUUSD",
+        exchange="OANDA",
+        interval=tf,
+        n_bars=500
+    )
 
-    except Exception as e:
-        print(f"❌ Data Fetch Error: {e}")
+    if df is None or df.empty:
         return None
+
+    df.rename(columns={
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "volume": "Volume"
+    }, inplace=True)
+
+    return df
