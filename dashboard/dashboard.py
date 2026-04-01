@@ -23,28 +23,95 @@ from app.trade_tracker import update_trades
 # ---------------- CONFIG ----------------
 st.set_page_config(layout="wide")
 
-# =========================
-# 🔐 AGREEMENT LOCK
-# =========================
-def agreement_gate():
-    if "agreed" not in st.session_state:
-        st.session_state.agreed = False
 
-    if not st.session_state.agreed:
-        st.markdown("## 🚨 OMI TRADING AGREEMENT REQUIRED")
-        st.warning("You must accept rules before using OMI.")
+# ============================================
+#  AGREEMENT LOCK 
+# ============================================
 
-        agree = st.checkbox("✅ I agree to trading rules")
+if "agreed" not in st.session_state:
+    st.session_state.agreed = False
 
-        if st.button("ENTER OMI TERMINAL"):
-            if agree:
-                st.session_state.agreed = True
-                st.rerun()
-            else:
-                st.error("Please accept rules")
-        st.stop()
+if not st.session_state.agreed:
 
-agreement_gate()
+    st.markdown("## 🚨 OMI TRADING AGREEMENT REQUIRED")
+
+    st.warning("You must read and accept the trading rules before using OMI.")
+
+    with st.expander("📘 Read Trading Rules & Ethics", expanded=True):
+        st.markdown("""
+### 📊 TRADING RULES & ETHICS
+
+**1. Capital Protection**
+- The trader shall prioritize capital preservation over profit generation.
+- Maximum risk per trade shall not exceed 1–2% of total capital.
+- Avoid excessive exposure that may lead to major drawdowns.
+
+**2. Strategy Compliance**
+- Trades must be executed strictly based on a predefined strategy.
+- No trade shall be taken without a valid setup.
+- Random or impulsive trading is strictly prohibited.
+
+**3. Risk Management**
+- Every trade must maintain a minimum Risk-to-Reward Ratio (RR) of 1:2.
+- Stop Loss (SL) must be defined before entering any trade.
+- Position sizing must follow risk management rules.
+
+**4. Emotional Discipline**
+- Maintain emotional control during trading.
+- No revenge trading, FOMO, or fear-based decisions.
+- All decisions must be logic-driven.
+
+**5. Loss Acceptance**
+- Losses are a natural part of trading.
+- Avoid attempting to recover losses through irrational trades.
+- Respect every trade outcome without emotional reaction.
+
+**6. Trade Journal**
+- Maintain a record of all trades.
+- Include entry, exit, reasoning, and outcome.
+- Review trades regularly for improvement.
+
+**7. Trade Control**
+- Avoid overtrading and unnecessary exposure.
+- Execute only high-quality setups.
+- Limit trades per session/day.
+
+**8. Ethics**
+- Maintain integrity and honesty in trading.
+- No market manipulation or unethical practices.
+- Follow fair trading standards.
+
+**9. Continuous Learning**
+- Commit to continuous improvement.
+- Learn from mistakes and refine strategies.
+- Stay updated with market behavior.
+
+**10. Consistency**
+- Focus on long-term consistency over short-term profits.
+- Follow a disciplined and repeatable process.
+- Stick to rules regardless of outcomes.
+
+**11. Pre-Trade Checklist**
+- Confirm valid setup before entering.
+- Define Entry, Stop Loss (SL), and Take Profit (TP).
+- No trade without full validation.
+
+**12. Accountability**
+- Take full responsibility for all trading decisions.
+- Do not blame external factors.
+- Maintain discipline and self-evaluation.
+        """)
+
+    agree = st.checkbox(" I have read and agree to the rules")
+
+    if st.button("ENTER OMI TERMINAL"):
+        if agree:
+            st.session_state.agreed = True
+            st.rerun()
+        else:
+            st.error("You must accept the rules to continue")
+
+    st.stop()
 
 # =========================
 # 🧠 SESSION INIT
@@ -61,6 +128,42 @@ def init_session():
             st.session_state[k] = v
 
 init_session()
+
+# ---------------- CAPITAL TRACKING ----------------
+if "capital" not in st.session_state:
+    st.session_state.capital = 10000
+
+if "equity_curve" not in st.session_state:
+    st.session_state.equity_curve = []
+
+if "trade_results" not in st.session_state:
+    st.session_state.trade_results = []
+
+
+# ---------------- CALCULATE PnL ----------------
+for trade in st.session_state.active_trades:
+
+    if trade["status"] in ["WIN", "LOSS"] and trade["pnl"] == 0:
+
+        risk_per_trade = 0.02 * st.session_state.capital
+
+        if trade["status"] == "WIN":
+            profit = risk_per_trade * 2
+            trade["pnl"] = profit
+            st.session_state.capital += profit
+
+        elif trade["status"] == "LOSS":
+            loss = -risk_per_trade
+            trade["pnl"] = loss
+            st.session_state.capital += loss
+
+        st.session_state.trade_results.append(trade["pnl"])
+
+
+# ---------------- EQUITY UPDATE ----------------
+st.session_state.equity_curve.append(st.session_state.capital)
+st.session_state.equity_curve = st.session_state.equity_curve[-100:]
+
 
 # =========================
 # 🌍 SESSION TYPE
@@ -270,9 +373,14 @@ st.session_state.active_trades = update_trades(st.session_state.active_trades, d
 if signal in ["BUY", "SELL"] and sl and tp:
     last = st.session_state.active_trades[-1] if st.session_state.active_trades else None
     if not last or last["status"] != "OPEN":
-        st.session_state.active_trades.append({
-            "signal": signal, "entry": entry, "sl": sl, "tp": tp,
-            "status": "OPEN", "time": datetime.now().strftime("%H:%M:%S")
+       st.session_state.active_trades.append({
+            "signal": signal,
+            "entry": entry,
+            "sl": sl,
+            "tp": tp,
+            "status": "OPEN",
+            "pnl": 0,
+            "time": datetime.now().strftime("%H:%M:%S")
         })
 
 # =========================
@@ -299,6 +407,32 @@ if not trades.empty:
     st.dataframe(trades.tail(20), use_container_width=True)
 else:
     st.info("No trades yet")
+
+# ---------------- ACCOUNT PERFORMANCE ----------------
+st.markdown("### 💰 Account Performance")
+
+col1, col2, col3 = st.columns(3)
+
+total_pnl = sum(st.session_state.trade_results)
+total_trades = len(st.session_state.trade_results)
+
+avg_pnl = total_pnl / total_trades if total_trades > 0 else 0
+
+col1.metric("💰 Capital", round(st.session_state.capital, 2))
+col2.metric("📈 Total PnL", round(total_pnl, 2))
+col3.metric("⚖️ Avg Trade", round(avg_pnl, 2))
+
+
+# ---------------- EQUITY CURVE ----------------
+st.markdown("### 📈 Equity Curve")
+
+if len(st.session_state.equity_curve) > 1:
+    equity_df = pd.DataFrame({
+        "Equity": st.session_state.equity_curve
+    })
+    st.line_chart(equity_df)
+else:
+    st.info("Not enough data for equity curve")
 
 # =========================
 # 🔁 BACKTEST
