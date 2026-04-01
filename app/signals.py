@@ -1,38 +1,53 @@
-from app.config import BUY_THRESHOLD, SELL_THRESHOLD
+# =========================================
+# SIGNAL GENERATION (V2 - MULTI CLASS FIX)
+# =========================================
 
 FEATURES = [
-    'ema50','atr','macd','body','momentum',
-    'ema_trend','trend_strength','rsi_zone',
-    'volatility','ema9','ema21','rsi','range','Close'
+    'ema9','ema21','ema50','rsi','atr','body','momentum',   
+    'ema_ratio','price_above_ema','rsi_change','atr_ratio',
+    'high_break','low_break','bullish'
 ]
+
+# 🔥 Confidence threshold (avoid weak signals)
+CONF_THRESHOLD = 0.60
+
 
 def generate_signal(model, df):
 
-    # ✅ USE ONLY TRAINED FEATURES
+    # ================= INPUT =================
     latest = df[FEATURES].iloc[-1:]
 
-    # ✅ MODEL PROBABILITY
-    prob = model.predict_proba(latest)[0][1]
+    # ================= PREDICTION =================
+    probs = model.predict_proba(latest)[0]
+    pred_class = model.predict(latest)[0]
 
-    # PRICE + ATR
+    # Confidence = highest probability
+    confidence = float(max(probs))
+
+    # ================= PRICE =================
     entry = float(df["Close"].iloc[-1])
     atr = float(df["atr"].iloc[-1]) if "atr" in df else None
 
-    # ✅ TREND FILTER
+    # ================= FILTERS =================
     ema9 = df["ema9"].iloc[-1]
     ema21 = df["ema21"].iloc[-1]
-
-    # ✅ RSI FILTER
     rsi = df["rsi"].iloc[-1]
 
-    # 🔥 FINAL LOGIC
-    if prob >= BUY_THRESHOLD and ema9 > ema21 and rsi < 70:
-        signal = "BUY"
+    trend_up = ema9 > ema21
+    trend_down = ema9 < ema21
 
-    elif prob <= SELL_THRESHOLD and ema9 < ema21 and rsi > 30:
-        signal = "SELL"
-
-    else:
+    # ================= SIGNAL LOGIC =================
+    if confidence < CONF_THRESHOLD:
         signal = "NO TRADE"
 
-    return signal, prob, entry, atr
+    else:
+        if pred_class == 2 and trend_up and rsi < 70:
+            signal = "BUY"
+
+        elif pred_class == 0 and trend_down and rsi > 30:
+            signal = "SELL"
+
+        else:
+            signal = "NO TRADE"
+
+    return signal, confidence, entry, atr

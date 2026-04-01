@@ -5,3 +5,8 @@ ta
 joblib
 streamlit
 requests
+
+
+
+
+
