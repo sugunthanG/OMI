@@ -1,53 +1,62 @@
 # =========================================
-# SIGNAL GENERATION (V2 - MULTI CLASS FIX)
+# SIGNAL GENERATION (V12 - CORRECT)
 # =========================================
 
 FEATURES = [
-    'ema9','ema21','ema50','rsi','atr','body','momentum',   
-    'ema_ratio','price_above_ema','rsi_change','atr_ratio',
-    'high_break','low_break','bullish'
+    'ema20','ema50','rsi','atr',
+    'momentum','trend_up','trend_down',
+    'break_up','break_down'
 ]
 
-# 🔥 Confidence threshold (avoid weak signals)
-CONF_THRESHOLD = 0.60
+# ================= CONFIG =================
+CONF_THRESHOLD = 0.65   # strong filter
 
 
+# =========================================
+# MAIN SIGNAL FUNCTION
+# =========================================
 def generate_signal(model, df):
 
-    # ================= INPUT =================
-    latest = df[FEATURES].iloc[-1:]
+    try:
+        # ================= INPUT =================
+        latest = df[FEATURES].iloc[-1:].copy()
 
-    # ================= PREDICTION =================
-    probs = model.predict_proba(latest)[0]
-    pred_class = model.predict(latest)[0]
+        # ================= MODEL =================
+        probs = model.predict_proba(latest)[0]
 
-    # Confidence = highest probability
-    confidence = float(max(probs))
+        sell_prob = float(probs[0])
+        hold_prob = float(probs[1])
+        buy_prob = float(probs[2])
 
-    # ================= PRICE =================
-    entry = float(df["Close"].iloc[-1])
-    atr = float(df["atr"].iloc[-1]) if "atr" in df else None
+        confidence = float(max(probs))
 
-    # ================= FILTERS =================
-    ema9 = df["ema9"].iloc[-1]
-    ema21 = df["ema21"].iloc[-1]
-    rsi = df["rsi"].iloc[-1]
+        # ================= PRICE =================
+        entry = float(df["Close"].iloc[-1])
+        atr = float(df["atr"].iloc[-1])
 
-    trend_up = ema9 > ema21
-    trend_down = ema9 < ema21
+        trend_up = int(df["trend_up"].iloc[-1])
+        trend_down = int(df["trend_down"].iloc[-1])
 
-    # ================= SIGNAL LOGIC =================
-    if confidence < CONF_THRESHOLD:
+        # ================= DEFAULT =================
         signal = "NO TRADE"
 
-    else:
-        if pred_class == 2 and trend_up and rsi < 70:
+        # ================= CONFIDENCE FILTER =================
+        if confidence < CONF_THRESHOLD:
+            return signal, confidence, entry, atr
+
+        # ================= MODEL DECISION =================
+        pred_class = probs.argmax()
+
+        # ================= BUY =================
+        if pred_class == 2 and trend_up == 1:
             signal = "BUY"
 
-        elif pred_class == 0 and trend_down and rsi > 30:
+        # ================= SELL =================
+        elif pred_class == 0 and trend_down == 1:
             signal = "SELL"
 
-        else:
-            signal = "NO TRADE"
+        return signal, confidence, entry, atr
 
-    return signal, confidence, entry, atr
+    except Exception as e:
+        print(f"Signal Error: {e}")
+        return "NO TRADE", 0.0, None, None

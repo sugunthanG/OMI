@@ -30,6 +30,10 @@ def fetch_data(interval="5m"):
                     "volume": "Volume"
                 }, inplace=True)
 
+                # ✅ ONLY THIS PART ADDED
+                df["ema9"] = df["Close"].ewm(span=9).mean()
+                df["ema15"] = df["Close"].ewm(span=15).mean()
+
                 return df
 
         except Exception as e:
