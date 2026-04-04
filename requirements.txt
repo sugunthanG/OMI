@@ -5,7 +5,7 @@ ta
 joblib
 streamlit
 requests
-
+tvdatafeed
 
 
 
