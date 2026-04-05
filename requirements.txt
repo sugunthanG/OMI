@@ -4,10 +4,8 @@ yfinance
 ta
 joblib
 streamlit
+streamlit-autorefresh
 requests
 git+https://github.com/baselsm/tvdatafeed.git
-
-
-
-
-
+chromedriver-autoinstaller
+selenium

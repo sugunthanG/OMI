@@ -1,7 +1,8 @@
 from tvDatafeed import TvDatafeed, Interval
 import time
 
-tv = TvDatafeed(username="c12fxtrader", password="Boopathi@2002")
+# ✅ NO LOGIN → NO CHROMEDRIVER NEEDED
+tv = TvDatafeed()
 
 def fetch_data(interval="5m"):
 
@@ -30,7 +31,7 @@ def fetch_data(interval="5m"):
                     "volume": "Volume"
                 }, inplace=True)
 
-                # ✅ ONLY THIS PART ADDED
+                # ✅ Indicators
                 df["ema9"] = df["Close"].ewm(span=9).mean()
                 df["ema15"] = df["Close"].ewm(span=15).mean()
 
