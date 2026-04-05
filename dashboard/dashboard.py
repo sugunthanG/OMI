@@ -314,18 +314,20 @@ def run_dashboard():
     # =========================
     # 🧠 MODEL HANDLING
     # =========================
-    def get_available_models():
-        files = sorted(glob.glob("models/gold_model_v*.pkl"), reverse=True)
-        return {
-            os.path.basename(f).replace(".pkl", "").replace("gold_model_", ""): f
-            for f in files
-        }
+    MODEL_PATH = "models/gold_model_v2.pkl"
 
-    MODEL_MAP = get_available_models()
+    if not os.path.exists(MODEL_PATH):
+        st.error(f"Model not found at: {MODEL_PATH}")
+        st.stop()
 
     @st.cache_resource
-    def get_model(path):
-        return load_model(path)
+    def get_model():
+        return load_model(MODEL_PATH)
+
+    model = get_model()
+
+    st.caption(f"Using: {MODEL_PATH}")
+    st.markdown("---")
 
 
     # =========================
@@ -336,15 +338,15 @@ def run_dashboard():
             st.markdown("## ⚙️ CONTROL PANEL")
             logout()
 
-            if not MODEL_MAP:
+            if not  MODEL_PATH:
                 st.error("No models found")
                 st.stop()
 
-            versions = list(MODEL_MAP.keys())
+            versions = list( MODEL_PATH.keys())
             default_idx = versions.index("v2") if "v2" in versions else 0
 
             model_version = st.selectbox("🧠 Model Version", versions, index=default_idx)
-            model_path = MODEL_MAP[model_version]
+            model_path =  MODEL_PATH[model_version]
 
             st.caption(f"Using: {model_path}")
             st.markdown("---")

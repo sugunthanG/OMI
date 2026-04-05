@@ -181,7 +181,7 @@ def login():
 
     st.markdown('</div>', unsafe_allow_html=True)  # main-box
 
-    return False
+    return st.session_state.logged_in
 
 
 # =========================
