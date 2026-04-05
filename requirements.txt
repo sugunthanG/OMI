@@ -10,3 +10,4 @@ git+https://github.com/baselsm/tvdatafeed.git
 chromedriver-autoinstaller
 selenium
 lightgbm
+scikit-learn
