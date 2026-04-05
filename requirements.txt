@@ -5,7 +5,8 @@ ta
 joblib
 streamlit
 requests
-tvdatafeed
+git+https://github.com/baselsm/tvdatafeed.git
+
 
 
 
