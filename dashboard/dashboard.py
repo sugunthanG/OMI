@@ -102,7 +102,18 @@ def run_dashboard():
     # =========================
     # DATA
     # =========================
-    df = fetch_data()
+    df = None
+
+    try:
+        df = fetch_data()
+    except Exception as e:
+        st.error(f"Data fetch failed: {e}")
+
+    if df is None or df.empty:
+        st.warning("No data available. Check tvdatafeed / connection.")
+        st.stop()
+
+    # ✅ Continue only if data exists
     df = create_features(df)
 
     for f in FEATURES:
