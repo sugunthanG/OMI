@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # ---------------- IMPORTS ----------------
 from app.login import logout
-from app.data import fetch_data
+from app.data import fetch_data_with_timeout
 from app.features import create_features
 from app.signals import generate_signal, FEATURES
 from app.model import load_model
@@ -108,12 +108,12 @@ def run_dashboard():
     df = None
 
     try:
-        df = fetch_data()
+        df = fetch_data_with_timeout()
     except Exception as e:
         st.error(f"Data fetch failed: {e}")
 
     if df is None or df.empty:
-        st.warning("No data available. Check tvdatafeed / connection.")
+        st.warning("⚠️ No data available")
         st.stop()
 
     # ✅ Continue only if data exists
