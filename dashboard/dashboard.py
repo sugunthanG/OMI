@@ -36,6 +36,7 @@ def get_model(path):
 
 
 def run_dashboard():
+    st.write("✅ Dashboard started")
 
     # =========================
     # SIDEBAR
@@ -75,6 +76,7 @@ def run_dashboard():
     # =========================
     # LOAD MODEL
     # =========================
+    st.write("✅ Model loaded")
     if not os.path.exists(MODEL_PATH):
         st.error("Model not found")
         st.stop()
@@ -102,6 +104,7 @@ def run_dashboard():
     # =========================
     # DATA
     # =========================
+    st.write("✅ Data fetched")
     df = None
 
     try:
@@ -176,6 +179,7 @@ def run_dashboard():
     # =========================
     # METRICS
     # =========================
+    st.write("✅ Features created")
     st.subheader("📊 Trade Metrics")
     st.write({
         "Entry": entry,
